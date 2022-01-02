@@ -132,7 +132,9 @@ parser.add_argument('--style', action='store_true',
 parser.add_argument('--alpha', default=0.5, type=float,
                     help='alpha value for style transfer')
 parser.add_argument('--label-gamma', default=0.8, type=float,
-                    help='gamma in Eq. (1) in paper')
+                    help='value of gamma in Eq. (1) in paper OR path to file containing values of gammas if --class-adaptive-gamma')
+parser.add_argument('--class-adaptive-gamma', action='store_true',
+                    help='use different gammas for different shape source class of images')
 parser.add_argument('--mixbn', action='store_true',
                     help='whether using auxiliary batch normalization')
 parser.add_argument('--lr_schedule', type=str, default='step', choices=['step', 'cos'])
@@ -174,6 +176,26 @@ if use_cuda:
 
 best_acc = 0  # best test accuracy
 
+def get_label_gamma(args):
+    '''
+    Get per-class label gamma \gamma_{y_s} for each different label of shape source
+    
+    Thus for pairs with the same shape source but different texture source, the gamma used
+    are the same, but for pairs with the same texture source but different shape source,
+    the gamma used are different (in general)
+
+    Returns: a tensor of gamma with shape (num_classes,)
+    '''
+    if not args.class_adaptive_gamma:
+        return args.label_gamma
+    else:
+        gammas = []
+        with open(args.label_gamma, "r") as fin:
+            for line in fin:
+                gamma = float(line.strip())
+                assert gamma>=0 and gamma<=1, "gamma need to be in range [0,1]!"
+                gammas.append(gamma)
+        return torch.tensor(gammas)
 
 def main():
     global best_acc, state
@@ -348,7 +370,7 @@ def main():
         print('\nEpoch: [%d | %d] LR: %f' % (epoch + 1, args.epochs, optimizer.param_groups[-1]['lr']))
 
         style_transfer = partial(StyleTransfer(), alpha=args.alpha,
-                                 label_mix_alpha=1 - args.label_gamma) if args.style else None
+                                 label_mix_alpha=1 - get_label_gamma(args)) if args.style else None
         train_func = partial(train, train_loader=train_loader, model=model, criterion=criterion,
                              optimizer=optimizer, epoch=epoch, use_cuda=use_cuda,
                              warmup_scheduler=warmup_scheduler, state=state, mixbn=args.mixbn,
