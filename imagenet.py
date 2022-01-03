@@ -158,6 +158,7 @@ parser.add_argument('--imagenet-a', action='store_true',
                     help="mapping the 1k labels to 200 labels (for evaluate ImageNet-A)")
 parser.add_argument('--FGSM', action='store_true',
                     help="evalute FGSM robustness")
+parser.add_argument('--save-eval', type=str, default=None, help='Save per-class accuracy to path')
 
 args = parser.parse_args()
 state = {k: v for k, v in args._get_kwargs()}
@@ -329,13 +330,13 @@ def main():
 
     if args.evaluate:
         print('\nEvaluation only')
-        test_loss, test_acc = test(val_loader, model, criterion, start_epoch, use_cuda, args.FGSM, args.num_classes)
+        test_loss, test_acc = test(val_loader, model, criterion, start_epoch, use_cuda, args.FGSM, args.num_classes, args.save_eval)
         print(' Test Loss:  %.8f, Test Acc:  %.2f' % (test_loss, test_acc))
         return
     
     if args.evaluate_train:
         print('\nEvaluation on training set only')
-        test_loss, test_acc = test(train_loader, model, criterion, start_epoch, use_cuda, args.FGSM, args.num_classes)
+        test_loss, test_acc = test(train_loader, model, criterion, start_epoch, use_cuda, args.FGSM, args.num_classes, args.save_eval)
         print(' Train Loss:  %.8f, Train Acc:  %.2f' % (test_loss, test_acc))
         return
 
@@ -587,7 +588,7 @@ def train(train_loader, model, criterion, optimizer, epoch, use_cuda, warmup_sch
         return losses.avg, top1.avg
 
 
-def test(val_loader, model, criterion, epoch, use_cuda, FGSM=False, num_classes=None):
+def test(val_loader, model, criterion, epoch, use_cuda, FGSM=False, num_classes=None, save_path=None):
     global best_acc
 
     batch_time = AverageMeter()
@@ -666,6 +667,11 @@ def test(val_loader, model, criterion, epoch, use_cuda, FGSM=False, num_classes=
         print(f"class\tacc")
         for i, acc in enumerate(accuracy_per_class.tolist()):
             print(f"{i}\t{acc}")
+        if save_path is not None:
+            with open(save_path, 'w') as fout:
+                for acc in accuracy_per_class.tolist():
+                    print(acc, file=fout)
+                
     return (losses.avg, top1.avg)
 
 
