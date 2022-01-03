@@ -131,7 +131,7 @@ parser.add_argument('--style', action='store_true',
                     help='use style transfer')
 parser.add_argument('--alpha', default=0.5, type=float,
                     help='alpha value for style transfer')
-parser.add_argument('--label-gamma', default=0.8, type=float,
+parser.add_argument('--label-gamma', default=0.8,
                     help='value of gamma in Eq. (1) in paper OR path to file containing values of gammas if --class-adaptive-gamma')
 parser.add_argument('--class-adaptive-gamma', action='store_true',
                     help='use different gammas for different shape source class of images')
@@ -196,7 +196,7 @@ def get_label_gamma(args):
                 gamma = float(line.strip())
                 assert gamma>=0 and gamma<=1, "gamma need to be in range [0,1]!"
                 gammas.append(gamma)
-        return torch.tensor(gammas)
+        return torch.tensor(gammas).cuda()
 
 def main():
     global best_acc, state
